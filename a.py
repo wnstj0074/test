@@ -1,27 +1,36 @@
-# models.py
+# analysis_engine.py
 
-from pydantic import BaseModel, Field
-from typing import List
+import os
+from langchain_nvidia_ai_endpoints import ChatNVIDIA
+from models import LegalAnalysisTemplate # 3.1에서 정의한 모델 임포트
 
-class LegalAnalysisTemplate(BaseModel):
-    """사용자의 법률 사연을 분석하여 구조화된 템플릿으로 변환합니다."""
+# 중요: 로컬 모델 서버 실행 및 환경 변수 설정이 선행되어야 합니다.
+# 예: os.environ = "YOUR_API_KEY"
 
-    category_classification: str = Field(
-        description="입력된 사연이 속하는 법률 카테고리 (예: 민법 – 재판상 이혼 사유 및 위자료 청구)"
-    )
+def analyze_user_story(story: str) -> LegalAnalysisTemplate | None:
+    """
+    사용자의 사연을 분석하여 구조화된 LegalAnalysisTemplate 객체를 반환합니다.
+    """
+    # 1. 로컬에서 서비스 중인 모델을 지정합니다.
+    llm = ChatNVIDIA(model="meta/llama3-70b-instruct")
 
-    legal_query_transformation: str = Field(
-        description="사용자의 일상적인 질문을 공식적인 법률 용어로 변환한 질의"
-    )
+    # 2. Pydantic 모델을 LLM이 사용할 '도구'로 바인딩합니다.
+    structured_llm = llm.with_structured_output(LegalAnalysisTemplate)
 
-    basis_documents: List[str] = Field(
-        description="법률적 판단의 근거가 되는 법 조항이나 판례 목록"
-    )
+    # 3. 시스템 프롬프트를 통해 AI의 역할과 임무를 명확히 부여합니다.
+    prompt = f"""
+    당신은 유능한 법률 보조원입니다. 사용자의 법률 사연을 듣고 변호사를 위해 핵심 내용을 명확하게 정리해야 합니다.
+    사연에서 법적으로 중요한 사실, 사건, 증거, 핵심 질문을 추출하여 제공된 LegalAnalysisTemplate 형식에 맞춰 구조화된 답변을 생성하세요.
 
-    evidence_summary: List[str] = Field(
-        description="사용자의 이야기에서 언급되거나, 일반적으로 필요한 증거 자료 목록"
-    )
+    ---
+    사용자 사연: "{story}"
+    ---
+    """
 
-    answer_summary: str = Field(
-        description="법률적 근거에 기반하여 사용자의 질문에 대한 핵심 내용을 요약한 답변"
-    )
+    # 4. LLM을 호출하여 구조화된 결과를 얻습니다.
+    try:
+        result = structured_llm.invoke(prompt)
+        return result
+    except Exception as e:
+        print(f"LLM 호출 또는 파싱 중 오류 발생: {e}")
+        return None
