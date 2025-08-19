@@ -1,34 +1,51 @@
-# fine_tuning_example.py
+# main.py
 
-# 1. 학습용 데이터(JSONL)는 이런 형식으로 생성됩니다.
-# AI의 답변(assistant)은 텍스트가 아니라, '어떤 도구를 호출했는지'에 대한 정보입니다.
-"""
-{"messages":}
-]}
-"""
+from pydantic import BaseModel, ValidationError
+from typing import List
 
-# 2. 훈련된 모델을 사용하는 방법
-from langchain_openai import ChatOpenAI
-from models import PrecedentTemplate, StatuteTemplate
+# Pydantic 모델(클래스)은 우리 데이터의 '설계도' 역할을 합니다.
+class User(BaseModel):
+    user_id: int
+    name: str
+    interests: List[str]
 
-# 훈련이 완료된 우리만의 전문가 모델 ID
-fine_tuned_model_id = "ft:gpt-3.5-turbo:my-org:multi-tool-legal-expert-v1"
+# 1. 정상적인 데이터가 들어올 경우
+user_data_1 = {
+    "user_id": 123,
+    "name": "김철수",
+    "interests": ["코딩", "독서"]
+}
+user_object_1 = User(**user_data_1)
+print(user_object_1)
+# 출력: user_id=123 name='김철수' interests=['코딩', '독서']
 
-# LangChain을 사용하여 모델과 우리가 정의한 '도구'들을 연결
-llm = ChatOpenAI(model=fine_tuned_model_id)
-llm_with_tools = llm.bind_tools()
+# 2. 타입이 틀렸지만, 변환 가능한 데이터가 들어올 경우
+user_data_2 = {
+    "user_id": "456",  # 의도적으로 문자열로 입력
+    "name": "이영희",
+    "interests": ["운동"]
+}
+user_object_2 = User(**user_data_2)
+# Pydantic이 자동으로 'user_id'를 문자열 "456"에서 정수 456으로 변환하고 검증합니다.
+print(user_object_2.user_id)
+# 출력: 456
 
-# 새로운 사용자 질문
-user_input = "근로기준법 23조에 대해 알려줘."
-
-# 모델 호출
-ai_msg = llm_with_tools.invoke(user_input)
-
-# 모델이 어떤 도구를 호출했는지 확인
-if ai_msg.tool_calls:
-    for tool_call in ai_msg.tool_calls:
-        print(f"AI가 선택한 도구: {tool_call['name']}")
-        print(f"도구에 전달된 내용: {tool_call['args']}")
-        # 출력 예시:
-        # AI가 선택한 도구: StatuteTemplate
-        # 도구에 전달된 내용: {'task_type': 'QA', 'article_number': '근로기준법 제23조', 'answer': '...'}
+# 3. 규칙에 맞지 않는 데이터가 들어올 경우
+user_data_3 = {
+    "user_id": "abc", # 정수로 변환 불가능
+    "name": "박민준"
+    # 'interests' 필드 누락
+}
+try:
+    User(**user_data_3)
+except ValidationError as e:
+    # Pydantic이 명확한 오류 메시지를 생성합니다.
+    print(e)
+    """
+    출력:
+    2 validation errors for User
+    user_id
+      Input should be a valid integer, unable to parse string as an integer [type=int_parsing, input_value='abc', input_type=str]
+    interests
+      Field required [type=missing, input_value={'user_id': 'abc', 'name': '박민준'}, input_type=dict]
+    """
