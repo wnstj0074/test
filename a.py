@@ -1,12 +1,20 @@
-# run_analysis.py
+# training_models.py
 
-from analysis_engine import analyze_user_story
+from pydantic import BaseModel, Field
+from typing import List, Literal
 
-# 예시 1: 이혼 관련 사연
-story_1 = "남편이 외도를 했는데, 제가 위자료를 받을 수 있나요? 카톡 증거랑 사진도 있어요."
-analysis_result_1 = analyze_user_story(story_1)
+# '판결문' 관련 작업을 위한 Pydantic 모델 (doc_class = 1)
+class PrecedentTemplate(BaseModel):
+    """판결문(Precedent) 데이터 검증용 템플릿"""
+    task_type: Literal
+    case_number: str
+    summary_or_answer: str
+    #... 판결문 템플릿의 나머지 필드들
 
-if analysis_result_1:
-    print("--- [예시 1] 이혼 사연 분석 결과 ---")
-    # Pydantic 객체를 JSON으로 예쁘게 출력
-    print(analysis_result_1.model_dump_json(indent=2, ensure_ascii=False))
+# '법령' 관련 작업을 위한 Pydantic 모델 (doc_class = 2)
+class StatuteTemplate(BaseModel):
+    """법령(Statute) 데이터 검증용 템플릿"""
+    task_type: Literal['QA']
+    article_number: str
+    answer: str
+    #... 법령 템플릿의 나머지 필드들
