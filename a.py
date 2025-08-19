@@ -1,4 +1,4 @@
-# main.py
+# pydantic_example.py
 
 from pydantic import BaseModel, ValidationError
 from typing import List
@@ -10,42 +10,20 @@ class User(BaseModel):
     interests: List[str]
 
 # 1. 정상적인 데이터가 들어올 경우
-user_data_1 = {
-    "user_id": 123,
-    "name": "김철수",
-    "interests": ["코딩", "독서"]
-}
+user_data_1 = {"user_id": 123, "name": "김철수", "interests": ["코딩", "독서"]}
 user_object_1 = User(**user_data_1)
-print(user_object_1)
-# 출력: user_id=123 name='김철수' interests=['코딩', '독서']
+print(f"정상 데이터: {user_object_1}")
 
 # 2. 타입이 틀렸지만, 변환 가능한 데이터가 들어올 경우
-user_data_2 = {
-    "user_id": "456",  # 의도적으로 문자열로 입력
-    "name": "이영희",
-    "interests": ["운동"]
-}
+user_data_2 = {"user_id": "456", "name": "이영희", "interests": ["운동"]}
 user_object_2 = User(**user_data_2)
 # Pydantic이 자동으로 'user_id'를 문자열 "456"에서 정수 456으로 변환하고 검증합니다.
-print(user_object_2.user_id)
-# 출력: 456
+print(f"타입 변환 데이터의 ID: {user_object_2.user_id}")
 
 # 3. 규칙에 맞지 않는 데이터가 들어올 경우
-user_data_3 = {
-    "user_id": "abc", # 정수로 변환 불가능
-    "name": "박민준"
-    # 'interests' 필드 누락
-}
+user_data_3 = {"user_id": "abc", "name": "박민준"} # 'interests' 필드 누락
 try:
     User(**user_data_3)
 except ValidationError as e:
     # Pydantic이 명확한 오류 메시지를 생성합니다.
-    print(e)
-    """
-    출력:
-    2 validation errors for User
-    user_id
-      Input should be a valid integer, unable to parse string as an integer [type=int_parsing, input_value='abc', input_type=str]
-    interests
-      Field required [type=missing, input_value={'user_id': 'abc', 'name': '박민준'}, input_type=dict]
-    """
+    print(f"\n오류 발생 데이터:\n{e}")
